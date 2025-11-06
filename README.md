@@ -75,7 +75,7 @@ Two helper scripts automate packaging and deployment via the AWS CLI. Ensure the
 
    This installs dependencies into `build/lambda/` and creates `build/pl_daily_snapshot.zip`.
 
-3. Deploy/update the Lambda function and attach an EventBridge rule scheduled for 7:55 PM Eastern:
+3. Deploy/update the Lambda function and attach an EventBridge rule scheduled for 7:55 PM EST:
 
    ```bash
    scripts/deploy_lambda.sh
