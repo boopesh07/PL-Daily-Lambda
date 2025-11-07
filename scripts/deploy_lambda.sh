@@ -43,9 +43,6 @@ fi
 : "${LAMBDA_HANDLER:=src.lambda_handler.handler}"
 : "${LAMBDA_TIMEOUT:=900}"
 : "${LAMBDA_MEMORY_SIZE:=512}"
-: "${EVENTBRIDGE_RULE_NAME:=pl-daily-pl-755pm}"
-: "${EVENTBRIDGE_TIMEZONE:=America/New_York}"
-: "${EVENTBRIDGE_CRON:=cron(55 19 * * ? *)}"
 
 if [[ ! -f "${LAMBDA_ZIP_PATH}" ]]; then
   echo "[deploy_lambda] ERROR: Lambda artifact not found at ${LAMBDA_ZIP_PATH}" >&2
@@ -144,38 +141,5 @@ if [[ "${ENV_JSON}" != '{"Variables":{}}' ]]; then
     >/dev/null
   wait_for_active
 fi
-
-FUNCTION_ARN=$(aws "${AWS_CLI_FLAGS[@]}" lambda get-function --function-name "${LAMBDA_FUNCTION_NAME}" --query 'Configuration.FunctionArn' --output text)
-
-echo "[deploy_lambda] Ensuring EventBridge rule ${EVENTBRIDGE_RULE_NAME}"
-CLI_VERSION=$(aws --version 2>&1)
-PUT_RULE_CMD=(aws "${AWS_CLI_FLAGS[@]}" events put-rule
-  --name "${EVENTBRIDGE_RULE_NAME}"
-  --schedule-expression "${EVENTBRIDGE_CRON}"
-  --state ENABLED
-  --description "Daily 7:55 PM ${EVENTBRIDGE_TIMEZONE} trigger for ${LAMBDA_FUNCTION_NAME}"
-)
-if [[ -n "${EVENTBRIDGE_TIMEZONE}" && "${CLI_VERSION}" == aws-cli\/2* ]]; then
-  PUT_RULE_CMD+=(--schedule-expression-timezone "${EVENTBRIDGE_TIMEZONE}")
-elif [[ -n "${EVENTBRIDGE_TIMEZONE}" ]]; then
-  echo "[deploy_lambda] WARNING: AWS CLI v1 detected; timezone support not available. Using UTC schedule."
-fi
-PUT_RULE_CMD+=(--query 'RuleArn' --output text)
-RULE_ARN=$("${PUT_RULE_CMD[@]}")
-
-echo "[deploy_lambda] Adding Lambda invoke permission for EventBridge."
-aws "${AWS_CLI_FLAGS[@]}" lambda add-permission \
-  --function-name "${LAMBDA_FUNCTION_NAME}" \
-  --statement-id "${EVENTBRIDGE_RULE_NAME}-invoke" \
-  --action "lambda:InvokeFunction" \
-  --principal events.amazonaws.com \
-  --source-arn "${RULE_ARN}" \
-  >/dev/null 2>&1 || true
-
-echo "[deploy_lambda] Linking rule to Lambda target."
-aws "${AWS_CLI_FLAGS[@]}" events put-targets \
-  --rule "${EVENTBRIDGE_RULE_NAME}" \
-  --targets "Id"="lambda","Arn"="${FUNCTION_ARN}" \
-  >/dev/null
 
 echo "[deploy_lambda] Deployment complete."

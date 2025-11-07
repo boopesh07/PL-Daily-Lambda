@@ -34,7 +34,7 @@ This prints the number of tickers processed along with example records.
 - Package the `src/` directory along with the installed dependencies (e.g. via a build step that runs `pip install -r requirements.txt -t build/`).
 - Configure the Lambda function environment variable `POLYGON_API_KEY`.
 - Use `src.lambda_handler.handler` as the handler entry point.
-- Schedule execution via EventBridge to generate daily metrics.
+- Schedule execution via EventBridge (configured separately) to generate daily metrics.
 
 ## Configuration
 
@@ -75,13 +75,13 @@ Two helper scripts automate packaging and deployment via the AWS CLI. Ensure the
 
    This installs dependencies into `build/lambda/` and creates `build/pl_daily_snapshot.zip`.
 
-3. Deploy/update the Lambda function and attach an EventBridge rule scheduled for 7:55 PM EST:
+3. Deploy/update the Lambda function:
 
    ```bash
    scripts/deploy_lambda.sh
    ```
 
-   The script will create the function if it does not exist (requires `LAMBDA_ROLE_ARN`) or update an existing one. It also sets/updates Lambda environment variables from `.env`, configures a rule named `pl-daily-pl-755pm` (override via `EVENTBRIDGE_RULE_NAME`), applies the `America/New_York` timezone, and links the rule to the function.
+   The script will create the function if it does not exist (requires `LAMBDA_ROLE_ARN`) or update an existing one. It also sets/updates Lambda environment variables from `.env`. Configure EventBridge rules/permissions manually via the AWS Console or CLI.
 
 ### Deployment Environment Variables
 
@@ -92,6 +92,4 @@ Key values consumed by the deployment scripts (add them to `.env` as needed):
 - `LAMBDA_FUNCTION_NAME` (required)
 - `LAMBDA_ROLE_ARN` (required when creating a new function)
 - `LAMBDA_TIMEOUT` / `LAMBDA_MEMORY_SIZE` / `LAMBDA_RUNTIME` / `LAMBDA_HANDLER` (optional overrides)
-- `EVENTBRIDGE_RULE_NAME` (default `pl-daily-pl-755pm`)
-- `EVENTBRIDGE_TIMEZONE` (default `America/New_York`)
-- `EVENTBRIDGE_CRON` (default `cron(55 19 * * ? *)`)
+- (Set up EventBridge rules separately; this script no longer manages them.)
